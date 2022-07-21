@@ -1,0 +1,81 @@
+import asyncio
+import discord
+import os
+from discord.ext import commands
+from dotenv import load_dotenv
+import sqlite3
+from discord.ext import tasks
+from itertools import cycle
+
+
+rick_list = []
+morty_list = []
+conn_morty = sqlite3.connect('mortydata.sqlite')
+cur_morty = conn_morty.cursor()
+                
+                
+for i in cur_morty.execute('SELECT line FROM mortylines ORDER BY rank ASC') :
+        morty_list.append(i[0])
+       
+                
+conn_rick = sqlite3.connect('rickdata.sqlite')
+cur_rick = conn_rick.cursor()
+line_rick = cur_rick.fetchall()
+for j in cur_rick.execute('SELECT line FROM ricklines ORDER BY rank ASC') :
+        rick_list.append(j[0])
+
+
+
+intents = discord.Intents().all()
+
+bot = commands.Bot(command_prefix="?",
+intents = intents,
+case_insensitive=False,
+)
+bot.remove_command('help')
+
+status = cycle(['space hunt with ur mom','build a bomb with ur mom'])
+
+@bot.event
+async def on_ready():
+                print("My name is {0.user} and i am ready to go".format(bot))
+                change_status.start()
+                print("Your bot is ready")
+
+                
+    
+    
+
+
+@tasks.loop(seconds=10)
+async def change_status():
+  await bot.change_presence(activity=discord.Game(next(status)))
+
+
+@bot.event
+async def on_message(message) : 
+        if int(message.author.id)  == "MORTY BOT ID" :
+                for i in morty_list : 
+                        if message.content == str(i) :
+                                await message.channel.trigger_typing()
+                                text = str(rick_list[morty_list.index(i) + 1])
+                                await asyncio.sleep((len(text.split()))*1.5)
+                                morty_index = morty_list.index(i)
+                               
+                                await message.channel.send(rick_list[morty_index+1])
+                               
+                                break
+                          
+                        else :
+
+                                continue
+        else : 
+                await bot.process_commands(message)
+
+
+@bot.command()
+async def start(ctx) :
+        await ctx.channel.send(rick_list[0])
+
+
+bot.run("TOKEN")
